@@ -2,6 +2,7 @@ package com.construction;
 
 import com.construction.db.DbConnector;
 import com.construction.db.SubConstructor;
+import com.construction.service.ServerSyncService;
 import com.construction.utils.StringUtil;
 import com.zkteco.biometric.FingerprintSensorErrorCode;
 import com.zkteco.biometric.FingerprintSensorEx;
@@ -32,6 +33,7 @@ public class Application extends JFrame {
     JButton btnIdentify = null;
     JButton btnSync = null;
     JButton btnClose = null;
+    JButton btnClear = null;
     JButton btnImg = null;
     JLabel idLabel = null;
     JTextField idField = null;
@@ -89,6 +91,10 @@ public class Application extends JFrame {
         btnClose = new JButton("Close");
         this.add(btnClose);
         btnClose.setBounds(30, 300 + nRSize, 100, 30);
+
+        btnClear = new JButton("Clear DB");
+        this.add(btnClear);
+        btnClear.setBounds(30, 360 + nRSize, 100, 30);
 
         btnImg = new JButton();
         btnImg.setBounds(160, 30, 280, 400);
@@ -194,6 +200,25 @@ public class Application extends JFrame {
 
         btnSync.addActionListener(e -> {
             textArea.setText("synchronizing data with server");
+        });
+
+        btnClear.addActionListener(e -> {
+            if (0 == mhDevice) {
+                textArea.setText("Please open device first!");
+                return;
+            }
+            int select = JOptionPane.showConfirmDialog(this,
+                    "Are you sure you want to clear DB?",
+                    "Warning",
+                    JOptionPane.OK_CANCEL_OPTION);
+            if (select == 2) {
+                return;
+            }
+            textArea.setText("Delete all data in DB");
+            DB.deleteAll();
+            FingerprintSensorEx.DBFree(mhDB);
+            mhDB = FingerprintSensorEx.DBInit();
+            textArea.setText("DB has been cleared");
         });
 
         btnIdentify.addActionListener(e -> {
@@ -305,11 +330,13 @@ public class Application extends JFrame {
                     SubConstructor subConstructor = new SubConstructor()
                             .setId(uid)
                             .setBase64(base64);
-                    if (DB.insert(subConstructor)) {
-                        JOptionPane.showMessageDialog(this,
-                                String.format("User with ID %s registered success fully", uid),
-                                "Success",
-                                JOptionPane.INFORMATION_MESSAGE);
+                    if (ServerSyncService.sentToRemoteServer(subConstructor)) {
+                        if (DB.insert(subConstructor)) {
+                            JOptionPane.showMessageDialog(this,
+                                    String.format("User with ID %s registered success fully", uid),
+                                    "Success",
+                                    JOptionPane.INFORMATION_MESSAGE);
+                        }
                     }
                     idField.setText(uid + 1 + "");
 
