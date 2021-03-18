@@ -32,7 +32,8 @@ public class DbConnector {
     public boolean insert(SubConstructor subConstructor) {
         String sql = String.format("insert into sub_constructor(id,base64) values(%s,'%s')", subConstructor.getId(), subConstructor.getBase64());
         try {
-            return statement.execute(sql);
+            statement.execute(sql);
+            return true;
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -80,7 +81,8 @@ public class DbConnector {
     public boolean deleteById(final String id) {
         String sql = String.format("delete from sub_constructor where id = %s", id);
         try {
-            return statement.execute(sql);
+            statement.execute(sql);
+            return true;
         } catch (SQLException e) {
             throw new RuntimeException("delete error");
         }
@@ -89,7 +91,8 @@ public class DbConnector {
     public boolean deleteAll() {
         String sql = "delete from sub_constructor";
         try {
-            return statement.execute(sql);
+            statement.execute(sql);
+            return true;
         } catch (SQLException e) {
             throw new RuntimeException("delete error");
         }

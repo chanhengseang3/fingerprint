@@ -105,7 +105,7 @@ public class Application extends JFrame {
         this.add(textArea);
         textArea.setBounds(10, 440, 480, 100);
 
-        this.setSize(520, 600);
+        this.setSize(520, 700);
         this.setLocationRelativeTo(null);
         this.setVisible(true);
         this.setTitle("Construction System");
@@ -139,6 +139,7 @@ public class Application extends JFrame {
                 return;
             }
             if (0 == (mhDB = FingerprintSensorEx.DBInit())) {
+                // init DB fail
                 textArea.setText("Init DB fail, ret = " + ret + "!");
                 FreeSensor();
                 return;
@@ -199,14 +200,28 @@ public class Application extends JFrame {
         });
 
         btnSync.addActionListener(e -> {
-            textArea.setText("synchronizing data with server");
+            textArea.setText("synchronizing data from server");
+            int select = JOptionPane.showConfirmDialog(this,
+                    "Are you sure you want to sync DB?",
+                    "Warning",
+                    JOptionPane.OK_CANCEL_OPTION);
+            if (select == 2) {
+                return;
+            }
+            FreeSensor();
+            textArea.setText("Delete all data in DB");
+            DB.deleteAll();
+            textArea.setText("DB has been cleared");
+            if(ServerSyncService.syncFromServer()){
+                JOptionPane.showMessageDialog(this,
+                        "Local DB has been synchronised",
+                        "Success",
+                        JOptionPane.PLAIN_MESSAGE);
+            }
+            textArea.setText("sync has finished");
         });
 
         btnClear.addActionListener(e -> {
-            if (0 == mhDevice) {
-                textArea.setText("Please open device first!");
-                return;
-            }
             int select = JOptionPane.showConfirmDialog(this,
                     "Are you sure you want to clear DB?",
                     "Warning",
@@ -214,10 +229,9 @@ public class Application extends JFrame {
             if (select == 2) {
                 return;
             }
+            FreeSensor();
             textArea.setText("Delete all data in DB");
             DB.deleteAll();
-            FingerprintSensorEx.DBFree(mhDB);
-            mhDB = FingerprintSensorEx.DBInit();
             textArea.setText("DB has been cleared");
         });
 
@@ -330,13 +344,20 @@ public class Application extends JFrame {
                     SubConstructor subConstructor = new SubConstructor()
                             .setId(uid)
                             .setBase64(base64);
-                    if (ServerSyncService.sentToRemoteServer(subConstructor)) {
+                    int serverStatus = ServerSyncService.sentToRemoteServer(subConstructor);
+                    if (200 == serverStatus) {
                         if (DB.insert(subConstructor)) {
+                            System.out.println("running this block");
                             JOptionPane.showMessageDialog(this,
                                     String.format("User with ID %s registered success fully", uid),
                                     "Success",
                                     JOptionPane.INFORMATION_MESSAGE);
                         }
+                    } else {
+                        JOptionPane.showMessageDialog(this,
+                                String.format("User with ID %s register fail with code:%s", uid, serverStatus),
+                                "Fail",
+                                JOptionPane.INFORMATION_MESSAGE);
                     }
                     idField.setText(uid + 1 + "");
 
