@@ -19,12 +19,34 @@ public class ServerSyncService {
     private static final Gson GSON = new Gson();
     private static final String REGISTER_URL_KEY = "register.url";
     private static final String GET_ALL_KEY = "get.all.url";
+    private static final String GET_PENDING_KEY = "get.pending.url";
 
-    public static int sentToRemoteServer(SubConstructor subConstructor) {
+    public static SubConstructor sentToRemoteServer(SubConstructor subConstructor) {
         String url = PropertyUtil.getProperty(REGISTER_URL_KEY);
         String body = GSON.toJson(subConstructor);
         Response response = HttpUtil.post(url, body);
-        return response.code();
+        if (200 != response.code()) {
+            return null;
+        }
+        try {
+            String result = Objects.requireNonNull(response.body()).string();
+            return GSON.fromJson(result, SubConstructor.class);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public static List<SubConstructor> getPendingSubConstructor() throws IOException {
+        String url = PropertyUtil.getProperty(GET_PENDING_KEY);
+        Response response = HttpUtil.get(url);
+        if (200 != response.code()) {
+            throw new RuntimeException("Fail to get list");
+        }
+        String result = Objects.requireNonNull(response.body()).string();
+        Type typeToken = new TypeToken<List<SubConstructor>>() {
+        }.getType();
+        return GSON.fromJson(result, typeToken);
     }
 
     public static boolean syncFromServer() {

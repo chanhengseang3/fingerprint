@@ -36,4 +36,8 @@ public class HttpUtil {
             throw new RuntimeException(e.getMessage());
         }
     }
+
+    public static void close(){
+        HTTP_CLIENT.connectionPool().evictAll();
+    }
 }

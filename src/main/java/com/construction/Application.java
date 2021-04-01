@@ -3,6 +3,7 @@ package com.construction;
 import com.construction.db.DbConnector;
 import com.construction.db.SubConstructor;
 import com.construction.service.ServerSyncService;
+import com.construction.utils.HttpUtil;
 import com.construction.utils.StringUtil;
 import com.zkteco.biometric.FingerprintSensorErrorCode;
 import com.zkteco.biometric.FingerprintSensorEx;
@@ -14,6 +15,7 @@ import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static com.construction.utils.BitmapUtil.byteArrayToInt;
 import static com.construction.utils.BitmapUtil.writeBitmap;
@@ -29,6 +31,7 @@ public class Application extends JFrame {
     private final byte[] template = new byte[2048];
     private final int[] templateLen = new int[1];
     JButton btnOpen = null;
+    JButton btnGetPending = null;
     JButton btnEnroll = null;
     JButton btnIdentify = null;
     JButton btnSync = null;
@@ -68,33 +71,38 @@ public class Application extends JFrame {
         int nRSize = 20;
         btnOpen.setBounds(30, 10 + nRSize, 100, 30);
 
+        btnGetPending = new JButton("Get Pending");
+        this.add(btnGetPending);
+        btnGetPending.setBounds(30, 60 + nRSize, 100, 30);
+
+
         btnEnroll = new JButton("Enroll");
         this.add(btnEnroll);
-        btnEnroll.setBounds(30, 60 + nRSize, 100, 30);
+        btnEnroll.setBounds(30, 110 + nRSize, 100, 30);
 
         btnIdentify = new JButton("Identify");
         this.add(btnIdentify);
-        btnIdentify.setBounds(30, 110 + nRSize, 100, 30);
+        btnIdentify.setBounds(30, 160 + nRSize, 100, 30);
 
         idLabel = new JLabel("User ID:");
         this.add(idLabel);
-        idLabel.setBounds(30, 160 + nRSize, 100, 30);
+        idLabel.setBounds(30, 190 + nRSize, 100, 30);
 
         idField = new JTextField();
         this.add(idField);
-        idField.setBounds(30, 190 + nRSize, 100, 30);
+        idField.setBounds(30, 220 + nRSize, 100, 30);
 
         btnSync = new JButton("Sync Data");
         this.add(btnSync);
-        btnSync.setBounds(30, 240 + nRSize, 100, 30);
+        btnSync.setBounds(30, 270 + nRSize, 100, 30);
 
         btnClose = new JButton("Close");
         this.add(btnClose);
-        btnClose.setBounds(30, 300 + nRSize, 100, 30);
+        btnClose.setBounds(30, 320 + nRSize, 100, 30);
 
         btnClear = new JButton("Clear DB");
         this.add(btnClear);
-        btnClear.setBounds(30, 360 + nRSize, 100, 30);
+        btnClear.setBounds(30, 370 + nRSize, 100, 30);
 
         btnImg = new JButton();
         btnImg.setBounds(160, 30, 280, 400);
@@ -103,7 +111,7 @@ public class Application extends JFrame {
 
         textArea = new JTextArea();
         this.add(textArea);
-        textArea.setBounds(10, 440, 480, 100);
+        textArea.setBounds(10, 450, 480, 190);
 
         this.setSize(520, 700);
         this.setLocationRelativeTo(null);
@@ -182,6 +190,19 @@ public class Application extends JFrame {
             textArea.setText("Open success!");
         });
 
+        btnGetPending.addActionListener(e -> {
+            try {
+                List<SubConstructor> pendingIds = ServerSyncService.getPendingSubConstructor();
+                String text = pendingIds.stream()
+                        .map(SubConstructor::toString)
+                        .collect(Collectors.joining("\n"));
+                textArea.setText("Pending sub-constructor are:\n" + text);
+            } catch (Exception exception) {
+                exception.printStackTrace();
+                textArea.setText("fail to fetch pending sub constructor");
+            }
+        });
+
         btnClose.addActionListener(e -> {
             FreeSensor();
             textArea.setText("Close success!");
@@ -212,7 +233,7 @@ public class Application extends JFrame {
             textArea.setText("Delete all data in DB");
             DB.deleteAll();
             textArea.setText("DB has been cleared");
-            if(ServerSyncService.syncFromServer()){
+            if (ServerSyncService.syncFromServer()) {
                 JOptionPane.showMessageDialog(this,
                         "Local DB has been synchronised",
                         "Success",
@@ -276,6 +297,7 @@ public class Application extends JFrame {
             mhDevice = 0;
         }
         FingerprintSensorEx.Terminate();
+        HttpUtil.close();
     }
 
     private void OnCaptureOK(byte[] imgBuf) {
@@ -344,22 +366,23 @@ public class Application extends JFrame {
                     SubConstructor subConstructor = new SubConstructor()
                             .setId(uid)
                             .setBase64(base64);
-                    int serverStatus = ServerSyncService.sentToRemoteServer(subConstructor);
-                    if (200 == serverStatus) {
-                        if (DB.insert(subConstructor)) {
-                            System.out.println("running this block");
+                    SubConstructor serverResponse = ServerSyncService.sentToRemoteServer(subConstructor);
+                    if (serverResponse != null) {
+                        serverResponse.setBase64(base64);
+                        if (DB.insert(serverResponse)) {
                             JOptionPane.showMessageDialog(this,
                                     String.format("User with ID %s registered success fully", uid),
                                     "Success",
                                     JOptionPane.INFORMATION_MESSAGE);
                         }
+                        textArea.setText("Please input user ID to continue!");
                     } else {
                         JOptionPane.showMessageDialog(this,
-                                String.format("User with ID %s register fail with code:%s", uid, serverStatus),
+                                String.format("User with ID %s register fail", uid),
                                 "Fail",
                                 JOptionPane.INFORMATION_MESSAGE);
                     }
-                    idField.setText(uid + 1 + "");
+                    idField.setText("");
 
                 } else {
                     textArea.setText("enroll fail, error code = " + ret);

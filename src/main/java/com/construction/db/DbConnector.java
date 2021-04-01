@@ -30,7 +30,10 @@ public class DbConnector {
     }
 
     public boolean insert(SubConstructor subConstructor) {
-        String sql = String.format("insert into sub_constructor(id,base64) values(%s,'%s')", subConstructor.getId(), subConstructor.getBase64());
+        String sql = String.format("replace into sub_constructor(id,name,base64) values(%s,'%s','%s')",
+                subConstructor.getId(),
+                subConstructor.getName(),
+                subConstructor.getBase64());
         try {
             statement.execute(sql);
             return true;
@@ -45,6 +48,7 @@ public class DbConnector {
             ResultSet rs = statement.executeQuery(query);
             return new SubConstructor()
                     .setId(rs.getInt("id"))
+                    .setName(rs.getString("name"))
                     .setBase64(rs.getString("base64"));
         } catch (SQLException e) {
             throw new RuntimeException("query error");
@@ -59,6 +63,7 @@ public class DbConnector {
             while (rs.next()) {
                 subConstructors.add(new SubConstructor()
                         .setId(rs.getInt("id"))
+                        .setName(rs.getString("name"))
                         .setBase64(rs.getString("base64")));
             }
             return subConstructors;
