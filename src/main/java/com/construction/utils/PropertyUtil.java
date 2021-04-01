@@ -1,6 +1,5 @@
 package com.construction.utils;
 
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
@@ -12,7 +11,7 @@ public class PropertyUtil {
     private static void loadPropertiesFile() {
         InputStream inputStream = null;
         try {
-            inputStream = new FileInputStream("src/main/resources/application.properties");
+            inputStream = PropertyUtil.class.getClassLoader().getResourceAsStream("application.properties");
             PROPERTIES.load(inputStream);
         } catch (IOException e) {
             e.printStackTrace();
