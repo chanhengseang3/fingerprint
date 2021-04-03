@@ -12,17 +12,21 @@ import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Objects;
+import java.util.logging.Logger;
 
 public class ServerSyncService {
 
     private static final DbConnector DB = new DbConnector();
     private static final Gson GSON = new Gson();
-    private static final String REGISTER_URL_KEY = "register.url";
-    private static final String GET_ALL_KEY = "get.all.url";
-    private static final String GET_PENDING_KEY = "get.pending.url";
+    private static final Logger LOGGER = Logger.getLogger(ServerSyncService.class.getSimpleName());
 
-    public static SubConstructor sentToRemoteServer(SubConstructor subConstructor) {
-        String url = PropertyUtil.getProperty(REGISTER_URL_KEY);
+    private static final String REGISTER_URL = "register.url";
+    private static final String GET_ALL = "get.all.url";
+    private static final String GET_PENDING = "get.pending.url";
+    private static final String SEND_VERIFY_USER = "send.verified.url";
+
+    public static SubConstructor addSubConstructorToRemoteServer(SubConstructor subConstructor) {
+        String url = PropertyUtil.getProperty(REGISTER_URL);
         String body = GSON.toJson(subConstructor);
         Response response = HttpUtil.post(url, body);
         if (200 != response.code()) {
@@ -37,8 +41,24 @@ public class ServerSyncService {
         }
     }
 
+    public static SubConstructor sendVerifiedUser(int userId) {
+        LOGGER.info("send a verification result to server");
+        String url = String.format(PropertyUtil.getProperty(SEND_VERIFY_USER), userId);
+        Response response = HttpUtil.post(url);
+        if (200 != response.code()) {
+            return null;
+        }
+        try {
+            String result = Objects.requireNonNull(response.body()).string();
+            return GSON.fromJson(result, SubConstructor.class);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
     public static List<SubConstructor> getPendingSubConstructor() throws IOException {
-        String url = PropertyUtil.getProperty(GET_PENDING_KEY);
+        String url = PropertyUtil.getProperty(GET_PENDING);
         Response response = HttpUtil.get(url);
         if (200 != response.code()) {
             throw new RuntimeException("Fail to get list");
@@ -51,7 +71,7 @@ public class ServerSyncService {
 
     public static boolean syncFromServer() {
         try {
-            String url = PropertyUtil.getProperty(GET_ALL_KEY);
+            String url = PropertyUtil.getProperty(GET_ALL);
             Response response = HttpUtil.get(url);
             if (200 != response.code()) {
                 return false;

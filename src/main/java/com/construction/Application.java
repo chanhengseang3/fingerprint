@@ -80,7 +80,7 @@ public class Application extends JFrame {
         this.add(btnEnroll);
         btnEnroll.setBounds(30, 110 + nRSize, 100, 30);
 
-        btnIdentify = new JButton("Identify");
+        btnIdentify = new JButton("Verify");
         this.add(btnIdentify);
         btnIdentify.setBounds(30, 160 + nRSize, 100, 30);
 
@@ -268,6 +268,7 @@ public class Application extends JFrame {
             if (!bIdentify) {
                 bIdentify = true;
             }
+            textArea.setText("Please place your finger on the device");
         });
 
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -366,12 +367,12 @@ public class Application extends JFrame {
                     SubConstructor subConstructor = new SubConstructor()
                             .setId(uid)
                             .setBase64(base64);
-                    SubConstructor serverResponse = ServerSyncService.sentToRemoteServer(subConstructor);
+                    SubConstructor serverResponse = ServerSyncService.addSubConstructorToRemoteServer(subConstructor);
                     if (serverResponse != null) {
                         serverResponse.setBase64(base64);
                         if (DB.insert(serverResponse)) {
                             JOptionPane.showMessageDialog(this,
-                                    String.format("User with ID %s registered success fully", uid),
+                                    String.format("User with ID %s registered successfully", uid),
                                     "Success",
                                     JOptionPane.INFORMATION_MESSAGE);
                         }
@@ -396,6 +397,13 @@ public class Application extends JFrame {
             int ret = FingerprintSensorEx.DBIdentify(mhDB, template, fid, score);
             if (ret == 0) {
                 textArea.setText("Identify success, fid = " + fid[0] + ",score=" + score[0]);
+                SubConstructor subConstructor = ServerSyncService.sendVerifiedUser(fid[0]);
+                if (subConstructor != null) {
+                    JOptionPane.showMessageDialog(this,
+                            String.format("User with ID %s verified successfully", fid[0]),
+                            "Success",
+                            JOptionPane.INFORMATION_MESSAGE);
+                }
             } else {
                 textArea.setText("Identify fail, error code = " + ret);
             }

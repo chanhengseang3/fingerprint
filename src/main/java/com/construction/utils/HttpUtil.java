@@ -23,6 +23,21 @@ public class HttpUtil {
         }
     }
 
+    public static Response post(String url) {
+        try {
+            RequestBody body = RequestBody.create(new byte[0], null);
+            Request request = new Request.Builder()
+                    .url(url)
+                    .post(body)
+                    .build();
+            Call call = HTTP_CLIENT.newCall(request);
+            return call.execute();
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
     public static Response get(String url) {
         try {
             Request request = new Request.Builder()
@@ -37,7 +52,7 @@ public class HttpUtil {
         }
     }
 
-    public static void close(){
+    public static void close() {
         HTTP_CLIENT.connectionPool().evictAll();
     }
 }
